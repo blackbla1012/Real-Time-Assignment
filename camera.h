@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <cmath>
 #include <GLFW/glfw3.h>
@@ -10,7 +11,7 @@
 class Camera {
 public:
     Camera() : position(0.0f, 0.0f, 3.0f), front(0.0f, 0.0f, -1.0f), up(0.0f, 1.0f, 0.0f),
-        yaw(-90.0f), pitch(0.0f), speed(2.5f), sensitivity(0.1f), 
+        yaw(-90.0f), pitch(0.0f), speed(2.5f), sensitivity(0.1f),
         zoom(1.0f), scrollSensitivity(0.5f), minZoom(0.2f), maxZoom(10.0f) {
         updateCameraVectors();
     }

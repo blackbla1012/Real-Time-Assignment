@@ -583,8 +583,8 @@ private:
 		ubo.view = userCamera.getViewMatrix();
 		ubo.view = glm::scale(ubo.view, glm::vec3(1.0f / userCamera.getZoom()));
 		ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
-		
-		
+
+
 		//ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		//ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
 		ubo.proj[1][1] *= -1;//y coordinate of the clip coordinates is inverted
