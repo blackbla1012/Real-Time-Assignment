@@ -8,6 +8,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "vec3.h"
+#include "vec4.h"
+
 class Camera {
 public:
     Camera() : position(0.0f, 0.0f, 3.0f), front(0.0f, 0.0f, -1.0f), up(0.0f, 1.0f, 0.0f),
@@ -15,6 +18,15 @@ public:
         zoom(1.0f), scrollSensitivity(0.5f), minZoom(0.2f), maxZoom(10.0f) {
         updateCameraVectors();
     }
+
+    std::string type;
+    std::string name;
+    struct perspective {
+        float aspect;
+        float vfov;
+        float near;
+        float far;
+    };
 
     // Process keyboard input to move the camera
     void processKeyboard(float deltaTime) {
