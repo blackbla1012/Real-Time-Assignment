@@ -19,7 +19,6 @@ public:
         updateCameraVectors();
     }
 
-    std::string type;
     std::string name;
     struct perspective {
         float aspect;

@@ -13,11 +13,10 @@ struct data {
 
 class Mesh {
 public:
-	std::string type;
 	std::string name;
 	std::string topology; //the primitive type and layout used in the mesh. Valid values are VkPrimitiveTopology identifiers without the prefix (e.g., "TRIANGLE_LIST").
 	uint32_t count; //the number of vertices in the mesh
-	
+
 	/*
 	struct indices {
 		std::string src;
@@ -25,7 +24,7 @@ public:
 		std::string format;
 	};//optional - if specified, a data stream containing indices for indexed drawing commands.
 	*/
-	
+
 	struct attributes {
 		data POSITION;
 		data NORMAL;

@@ -1468,7 +1468,8 @@ private:
 	}
 };
 
-int main() {
+/*
+* int main() {
 	HelloTriangleApplication app;
 
 	try {
@@ -1481,3 +1482,4 @@ int main() {
 
 	return EXIT_SUCCESS;
 }
+*/

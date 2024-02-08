@@ -6,7 +6,6 @@
 
 class Node {
 public:
-	std::string type;
 	std::string name;
 	Vec3 translation;
 	Vec4 rotation;

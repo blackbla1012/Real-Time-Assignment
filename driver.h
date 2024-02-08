@@ -6,7 +6,6 @@
 
 class Driver {
 public:
-	std::string type;
 	std::string name;
 	uint32_t node;
 	std::string channel;//name of an animation channel; implies a data width (see below).
@@ -14,4 +13,3 @@ public:
 	std::vector<uint32_t> values;//array of numbers giving keyframe values
 	std::string interpolation = "LINEAR";// interpolation mode for the data (see below).
 };
-

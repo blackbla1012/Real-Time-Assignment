@@ -6,9 +6,6 @@
 
 class Data {
 public:
-	std::string type;
 	std::string name;
 	std::vector<uint32_t> data;
 };
-
-
