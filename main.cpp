@@ -24,7 +24,10 @@
 #include <array>
 #include <chrono>
 
-#include "camera.h"
+#include "scene.h"
+#include "vec3.h"
+#include "vec4.h"
+#include "meshReader.h"
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
@@ -85,8 +88,8 @@ struct SwapChainSupportDetails {
 };
 
 struct Vertex {
-	glm::vec2 pos;
-	glm::vec3 color;
+	Vec3 pos;
+	Vec3 color;
 
 	static VkVertexInputBindingDescription getBindingDescription() {
 		VkVertexInputBindingDescription bindingDescription{};
@@ -101,7 +104,7 @@ struct Vertex {
 		std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};//[0]->pos, [1]-> color
 		attributeDescriptions[0].binding = 0;
 		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;//this means vec2
+		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
 		attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
 		attributeDescriptions[1].binding = 0;
@@ -113,11 +116,7 @@ struct Vertex {
 	}
 };
 
-const std::vector<Vertex> vertices = {
-	{{-0.5f, -1.0f}, {1.0f, 0.0f, 0.0f}},
-	{{0.5f, -1.0f}, {0.0f, 1.0f, 0.0f}},
-	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+std::vector<Vertex> vertices = {
 };
 
 const std::vector<uint16_t> indices = {
@@ -579,7 +578,7 @@ private:
 		//float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 		UniformBufferObject ubo{};
-		ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 		ubo.view = userCamera.getViewMatrix();
 		ubo.view = glm::scale(ubo.view, glm::vec3(1.0f / userCamera.getZoom()));
 		ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
@@ -613,7 +612,7 @@ private:
 
 		updateUniformBuffer(currentFrame);
 
-		VkSubmitInfo submitInfo{};
+		VkSubmitInfo submitInfo{}; 
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
 		VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] };
@@ -1009,38 +1008,6 @@ private:
 		VkInstanceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		createInfo.pApplicationInfo = &appInfo;
-
-		// Vulkan is a platform agnostic API, which means that you need an extension to 
-		// interface with the window system. GLFW has a handy built-in function that 
-		// returns the extension(s) it needs to do that which we can pass to the struct:
-
-		//check extension support
-		/*
-		uint32_t extensionCount = 0;
-		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-		std::vector<VkExtensionProperties> extensions(extensionCount);
-		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
-
-		std::cout << "available extensions:\n";
-
-		for (const auto& extension : extensions) {
-			std::cout << "\t" << extension.extensionName << "\n";
-		}
-
-		uint32_t glfwExtenstionCount = 0;
-		const char** glfwExtensions;
-		std::vector<const char*> requiredExtensions;
-
-		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtenstionCount);
-
-		for (uint32_t i = 0; i < glfwExtenstionCount; i++) {
-			requiredExtensions.emplace_back(glfwExtensions[i]);
-		}
-
-		requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-
-
-		*/
 
 		createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 
@@ -1468,8 +1435,23 @@ private:
 	}
 };
 
-/*
-* int main() {
+
+int main() {
+	MeshReader meshInfo("sg-Articulation.Plane.002.b72");
+	if (meshInfo.readMesh(0, 28, "R32G32B32_SFLOAT", 36, "POSITION")) {
+		std::cout << "Succeeded to read the mesh information!" << std::endl;
+	}
+	else {
+		std::cout << "Failed to read the mesh information!" << std::endl;
+	}
+
+	std::cout << "8888\n" << std::endl;
+
+	for (auto& vertex : meshInfo.vertices) {
+		vertices.push_back()
+	}
+
+
 	HelloTriangleApplication app;
 
 	try {
@@ -1482,4 +1464,4 @@ private:
 
 	return EXIT_SUCCESS;
 }
-*/
+
