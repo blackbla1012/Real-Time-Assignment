@@ -1,22 +1,54 @@
 #pragma once
-#include<iostream>
-#include<vector>
+#include <iostream>
+#include <vector>
 #include <cmath>
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
 #include <map>
-#include<optional>
+#include <optional>
+#include <array>
+#include <functional>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "vec3.h"
 #include "vec4.h"
+#include "mat4.h"
 
-class Vertex {
+struct Vertex {
     Vec3 POSITION;
     Vec3 NORMAL;
     Vec4 COLOR;
+
+    static VkVertexInputBindingDescription getBindingDescription() {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 0;
+        bindingDescription.stride = sizeof(Vertex);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;//move data entry after each vertex
+
+        return bindingDescription;
+    }
+
+    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};//[0]->POSITION, [1]-> NORMAL, [2]-> COLOR
+        attributeDescriptions[0].binding = 0;
+        attributeDescriptions[0].location = 0;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescriptions[0].offset = offsetof(Vertex, POSITION);
+
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;//this means vec3
+        attributeDescriptions[1].offset = offsetof(Vertex, NORMAL);
+
+        attributeDescriptions[2].binding = 0;
+        attributeDescriptions[2].location = 2;
+        attributeDescriptions[2].format = VK_FORMAT_R8G8B8A8_UNORM;
+        attributeDescriptions[2].offset = offsetof(Vertex, COLOR);
+
+        return attributeDescriptions;
+    }
 };
 
 class Scene {
@@ -50,9 +82,11 @@ public:
 	data POSITION;
 	data NORMAL;
 	data COLOR;
+
+    Mat4 localToWorld;
 };
 
-class Node {
+class Node : public std::enable_shared_from_this<Node> {
 public:
 	std::uint32_t s72Index;
 	std::string name;
@@ -61,7 +95,22 @@ public:
 	Vec3 scale = Vec3(1.0f, 1.0f, 1.0f);
 	std::optional<uint32_t> camera;
     std::optional<uint32_t> mesh;
-    std::vector<uint32_t> children;
+    std::vector<uint32_t> childrenIndex;
+    std::vector<std::shared_ptr<Node>> children;
+    std::shared_ptr<Node> parent; // 使用 std::shared_ptr<Node> 代替 Node*
+
+    // 自定义的哈希函数结构体
+    struct NodeHash {
+        std::size_t operator()(const std::shared_ptr<Node>& node) const {
+            // 在这里编写计算哈希值的逻辑，例如可以使用节点的 s72Index 作为哈希值
+            return std::hash<uint32_t>()(node->s72Index);
+        }
+    };
+
+    bool operator==(const Node& other) const {
+        return s72Index == other.s72Index;
+    }
+
 };
 
 class Driver {
@@ -97,6 +146,7 @@ public:
     float vfov;
     float near;
     std::optional<float> far;
+    Mat4 localToWorld;
 
     // Process keyboard input to move the camera
     void processKeyboard(float deltaTime) {

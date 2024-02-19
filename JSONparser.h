@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -13,15 +14,15 @@ public:
 	JsonParser(const std::string& jsonFilePath) : jsonFilePath(jsonFilePath) {}
 	
 	uint32_t index = 0;
-	std::vector<Camera> cameras;
-	std::vector<Mesh> meshes;
-	std::vector<Node> nodes;
+	std::map<uint32_t, Camera> cameras;
+	std::map<uint32_t, Mesh> meshes;
+	std::map<uint32_t, Node> nodes;
 	std::vector<Driver> drivers;
 	std::vector<Data> datas;
 	std::vector<Scene> scenes;
 
 	bool parse() {
-		std::ifstream file("JSON/sg-Articulation.s72");
+		std::ifstream file(jsonFilePath);
 		if (!file.is_open()) {
 			throw std::runtime_error("Failed to open the file!");
 			return false;
@@ -113,7 +114,7 @@ private:
 					index++;
 					camera.s72Index = index;
 
-					cameras.push_back(camera);
+					cameras.insert({ index, camera });
 					std::cout << "object index: " << camera.s72Index << "\n" << std::endl;
 					std::cout << "camera name: " << camera.name << "\n" << std::endl;
 					std::cout << "camera aspect: " << camera.aspect << "\n" << std::endl;
@@ -229,7 +230,7 @@ private:
 								while (std::getline(lineStream, value, ',')) {
 									value = value.substr(value.find_first_not_of(" \t\r\n\"["), value.find_last_not_of(" \t\r\n\"]") + 1);
 									int childStr = std::stoi(value);
-									node.children.push_back(static_cast<uint32_t>(childStr));
+									node.childrenIndex.push_back(static_cast<uint32_t>(childStr));
 									std::cout << "node children: " << childStr << "\n" << std::endl;
 								}
 							}
@@ -239,7 +240,7 @@ private:
 					index++;
 					node.s72Index = index;
 
-					nodes.push_back(node);
+					nodes.insert({ index, node });
 					std::cout << "object index: " << node.s72Index << "\n" << std::endl;
 					std::cout << "node name: " << node.name << "\n" << std::endl;
 					//std::cout << "node translation: " << node.translation.x << "\n" << std::endl;
@@ -366,7 +367,7 @@ private:
 					index++;
 					mesh.s72Index = index;
 
-					meshes.push_back(mesh);
+					meshes.insert({ index, mesh });
 					std::cout << "object index: " << mesh.s72Index << "\n" << std::endl;
 					std::cout << "mesh name: " << mesh.name << "\n" << std::endl;
 				}

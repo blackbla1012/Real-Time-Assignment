@@ -23,11 +23,15 @@
 #include <fstream>
 #include <array>
 #include <chrono>
+#include <unordered_set>
+#include <functional>
 
 #include "scene.h"
 #include "vec3.h"
 #include "vec4.h"
 #include "meshReader.h"
+#include "JSONparser.h"
+#include "mat4.h"
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
@@ -87,41 +91,11 @@ struct SwapChainSupportDetails {
 	std::vector<VkPresentModeKHR> presentModes;
 };
 
-struct Vertex {
-	Vec3 pos;
-	Vec3 color;
-
-	static VkVertexInputBindingDescription getBindingDescription() {
-		VkVertexInputBindingDescription bindingDescription{};
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof(Vertex);
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;//move data entry after each vertex
-
-		return bindingDescription;
-	}
-
-	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};//[0]->pos, [1]-> color
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;//this means vec3
-		attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-		return attributeDescriptions;
-	}
-};
-
-std::vector<Vertex> vertices = {
-};
-
-const std::vector<uint16_t> indices = {
+/*
+* const std::vector<uint16_t> indices = {
 	0, 1, 2, 2, 3, 0
 };
+*/
 
 struct UniformBufferObject {
 	alignas(16) glm::mat4 model;
@@ -176,10 +150,10 @@ void scrollCallback(GLFWwindow* window, double xOffset, double yOffset) {
 
 class HelloTriangleApplication {
 public:
-	void run() {
+	void run(std::vector<Vertex>& vertices) {
 		initWindow();
-		initVulkan();
-		mainLoop();
+		initVulkan(vertices);
+		mainLoop(vertices);
 		cleanup();
 	}
 
@@ -214,8 +188,8 @@ private:
 
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
-	VkBuffer indexBuffer;
-	VkDeviceMemory indexBufferMemory;
+	//VkBuffer indexBuffer;
+	//VkDeviceMemory indexBufferMemory;
 
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
@@ -249,7 +223,7 @@ private:
 		app->framebufferResized = true;
 	}
 
-	void initVulkan() {
+	void initVulkan(std::vector<Vertex> &vertices) {
 		createInstance();
 		setupDebugMessenger();
 		createSurface();
@@ -263,8 +237,8 @@ private:
 		cameraCallBackSetup();
 		createFramebuffers();
 		createCommandPool();
-		createVertexBuffer();
-		createIndexBuffer();
+		createVertexBuffer(vertices);
+		//createIndexBuffer();
 		createUniformBuffers();
 		createDescriptorPool();
 		createDescriptorSets();
@@ -272,11 +246,11 @@ private:
 		createSyncObjects();
 	}
 
-	void mainLoop() {
+	void mainLoop(std::vector<Vertex>& vertices) {
 		while (!glfwWindowShouldClose(window)) {
 			updateCameraCallBack();
 			glfwPollEvents();
-			drawFrame();
+			drawFrame(vertices);
 		}
 		vkDeviceWaitIdle(device);
 	}
@@ -303,8 +277,8 @@ private:
 		vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 		vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
 
-		vkDestroyBuffer(device, indexBuffer, nullptr);
-		vkFreeMemory(device, indexBufferMemory, nullptr);
+		//vkDestroyBuffer(device, indexBuffer, nullptr);
+		//vkFreeMemory(device, indexBufferMemory, nullptr);
 
 		vkDestroyBuffer(device, vertexBuffer, nullptr);
 		vkFreeMemory(device, vertexBufferMemory, nullptr);
@@ -440,7 +414,8 @@ private:
 		}
 	}
 
-	void createIndexBuffer() {
+	/*
+	* 	void createIndexBuffer() {
 		VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
 		VkBuffer stagingBuffer;
@@ -459,6 +434,8 @@ private:
 		vkDestroyBuffer(device, stagingBuffer, nullptr);
 		vkFreeMemory(device, stagingBufferMemory, nullptr);
 	}
+	*/
+
 
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
 		VkBufferCreateInfo bufferInfo{};
@@ -486,7 +463,7 @@ private:
 		vkBindBufferMemory(device, buffer, bufferMemory, 0);
 	}
 
-	void createVertexBuffer() {
+	void createVertexBuffer(std::vector<Vertex> &vertices) {
 		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
 		VkBuffer stagingBuffer;
@@ -591,7 +568,7 @@ private:
 		memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 	}
 
-	void drawFrame() {
+	void drawFrame(std::vector<Vertex>& vertices) {
 		vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
 		uint32_t imageIndex;
@@ -608,7 +585,7 @@ private:
 		vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
 		vkResetCommandBuffer(commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
-		recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
+		recordCommandBuffer(commandBuffers[currentFrame], imageIndex, vertices);
 
 		updateUniformBuffer(currentFrame);
 
@@ -679,7 +656,7 @@ private:
 
 	}
 
-	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, std::vector<Vertex> &vertices) {
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags = 0; // Optional
@@ -707,7 +684,7 @@ private:
 		VkBuffer vertexBuffers[] = { vertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);//bind indexbuffer
+		//vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);//bind indexbuffer
 
 		VkViewport viewport{};
 		viewport.x = 0.0f;
@@ -723,9 +700,10 @@ private:
 		scissor.extent = swapChainExtent;
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-		//vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0); // not using index buffer
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
-		vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+		vkCmdDraw(commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0); // not using index buffer
+
+		//vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(commandBuffer);
 		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -1435,27 +1413,167 @@ private:
 	}
 };
 
+void assignParents(std::shared_ptr<Node>& node) {
+	for (auto& child : node->children) {
+		child->parent = node->shared_from_this(); // 使用 shared_from_this 获取指向父节点的 shared_ptr
+		std::cout << "child's index: " << child->s72Index << std::endl;
+		std::cout << "child's parent index: " << child->parent->s72Index << std::endl;
+		assignParents(child);
+	}
+}
+
+std::vector<std::shared_ptr<Node>> assignNodes(std::map<uint32_t, Node> nodesMap) {
+	std::vector<std::shared_ptr<Node>> nodes;
+	for (auto& pair : nodesMap) {
+		auto& node = pair.second;
+		auto sharedNode = std::make_shared<Node>(node);
+		if (!node.childrenIndex.empty()) {
+			for (uint32_t nodeIndex : node.childrenIndex) {
+				sharedNode->children.push_back(std::make_shared<Node>(nodesMap[nodeIndex]));
+			}
+		}
+		nodes.push_back(sharedNode);
+	}
+
+	for (auto& node : nodes) {
+		assignParents(node);
+	}
+
+	return nodes;
+}
+/*
+* 
+* // 在全局命名空间中声明特化的 std::hash 模板
+namespace std {
+	template <>
+	struct hash<Node> {
+		std::size_t operator()(const Node& node) const {
+			return Node::NodeHash()(node);
+		}
+	};
+};
+*/
+
+
+void topologicalSortUtil(std::shared_ptr<Node>& node,
+	std::unordered_set<std::shared_ptr<Node>, Node::NodeHash>& visited,
+	std::vector<std::shared_ptr<Node>>& result) {
+	if (visited.count(node))
+		return;
+
+	visited.insert(node);
+
+	for (auto& child : node->children) {
+		topologicalSortUtil(child, visited, result);
+	}
+
+	result.push_back(node);
+}
+
+std::vector<std::shared_ptr<Node>> topologicalSort(std::vector<std::shared_ptr<Node>>& nodes) {
+	std::vector<std::shared_ptr<Node>> result;
+	std::unordered_set<std::shared_ptr<Node>, Node::NodeHash> visited;
+
+	for (auto& node : nodes) {
+		topologicalSortUtil(node, visited, result);
+	}
+
+	return result;
+}
+
+
+// 在 computeTransform 函数中，将 parent 引用修改为 std::shared_ptr<Node>
+Mat4 computeTransform(std::shared_ptr<Node>& node) {
+	std::cout << "computeTransform: " << node->s72Index << std::endl;
+	Mat4 result = Mat4::translate(node->translation) * Mat4::rotate(node->rotation) * Mat4::scale(node->scale);
+
+	if (node->parent != nullptr) {
+		std::cout << "has parent value" << std::endl;
+		result = computeTransform(node->parent) * result;
+	}
+
+	return result;
+}
+
 
 int main() {
-	MeshReader meshInfo("sg-Articulation.Plane.002.b72");
-	if (meshInfo.readMesh(0, 28, "R32G32B32_SFLOAT", 36, "POSITION")) {
-		std::cout << "Succeeded to read the mesh information!" << std::endl;
+	std::vector<Vertex> allVertices;
+
+	JsonParser jsonParser("JSON/sg-Articulation.s72");
+
+
+	if (jsonParser.parse()) {
+		std::cout << "Succeeded to parse the file!" << std::endl;
 	}
 	else {
-		std::cout << "Failed to read the mesh information!" << std::endl;
+		std::cout << "Failed to parse the file!" << std::endl;
+	}
+	
+
+	std::vector<std::shared_ptr<Node>> Nodes = assignNodes(jsonParser.nodes);
+	std::vector<std::shared_ptr<Node>> sortedNodes = topologicalSort(Nodes);
+
+
+	//assign transformations
+	for (auto& node : sortedNodes) {
+		Mat4 localToWorld = computeTransform(node);
+		std::cout << "node index: " << node->s72Index << std::endl;
+
+		if (node->camera.has_value()) {
+			//jsonParser.cameras.find(node->camera.value())->second.localToWorld = localToWorld;
+		}
+		else if (node->mesh.has_value()) {
+			//std::cout << "mesh transform assign\n" << std::endl;
+			jsonParser.meshes.find(node->mesh.value())->second.localToWorld = localToWorld;
+			std::cout << "mesh transform assign\n" << std::endl;
+		}
+		else continue;
 	}
 
-	std::cout << "8888\n" << std::endl;
+	for (auto& mesh : jsonParser.meshes) {
+		MeshReader meshInfo(mesh.second.POSITION.src, mesh.second.count);
+		if (meshInfo.readMesh(mesh.second.POSITION.offset, mesh.second.POSITION.stride, mesh.second.POSITION.format, "POSITION")) {
+			std::cout << "Succeeded to read the mesh POSITION information!" << std::endl;
+		}
+		else {
+			std::cout << "Failed to read the mesh information!" << std::endl;
+		}
 
-	for (auto& vertex : meshInfo.vertices) {
-		vertices.push_back()
+		if (meshInfo.readMesh(mesh.second.NORMAL.offset, mesh.second.NORMAL.stride, mesh.second.NORMAL.format, "NORMAL")) {
+			std::cout << "Succeeded to read the mesh NORMAL information!" << std::endl;
+		}
+		else {
+			std::cout << "Failed to read the mesh information!" << std::endl;
+		}
+
+		if (meshInfo.readMesh(mesh.second.COLOR.offset, mesh.second.COLOR.stride, mesh.second.COLOR.format, "COLOR")) {
+			std::cout << "Succeeded to read the mesh COLOR information!" << std::endl;
+		}
+		else {
+			std::cout << "Failed to read the mesh information!" << std::endl;
+		}
+
+		std::cout << "Read Mesh Index: " << mesh.second.s72Index << std::endl;
+
+		for (Vertex& vertex : meshInfo.vertices) {
+			vertex.POSITION = mesh.second.localToWorld * vertex.POSITION;
+			vertex.NORMAL = Mat4::transpose(Mat4::inverse(mesh.second.localToWorld)) * vertex.NORMAL;
+		}
+
+		std::cout << "file name: " << mesh.second.POSITION.src << std::endl;
+		std::cout << "mesh vetices: " << mesh.second.count << std::endl;
+
+		allVertices.insert(allVertices.end(), meshInfo.vertices.begin(), meshInfo.vertices.end());
+		//暂时清空内存
+		meshInfo.vertices.resize(0);
 	}
 
+	std::cout << "vertex count: " << allVertices.size() << std::endl;
 
 	HelloTriangleApplication app;
 
 	try {
-		app.run();
+		app.run(allVertices);
 	}
 	catch (const std::exception& e) {
 		std::cerr << e.what() << std::endl;

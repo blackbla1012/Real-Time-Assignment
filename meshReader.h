@@ -4,15 +4,18 @@
 #include <vector>
 #include "scene.h"
 
+#include "vec3.h"
+#include "vec4.h"
+
 //vertex structure
 
 class MeshReader {
 public:
-	MeshReader(const std::string& fileName) : fileName(fileName) {}
+	MeshReader(const std::string& fileName, const uint32_t count) : fileName(fileName), count(count) {}
 
 	std::vector<Vertex> vertices;
-
-	bool readMesh(size_t offset, size_t stride, std::string format, uint32_t count, std::string type) {
+	
+	bool readMesh(size_t offset, size_t stride, std::string format, std::string type) {
 		std::ifstream file("JSON/" + fileName, std::ios::binary);
 		if (!file.is_open()) {
 			std::cerr << "Failed to open file!" << fileName << std::endl;
@@ -28,29 +31,23 @@ public:
 
 		file.seekg(offset, std::ios::beg);
 		if (type == "POSITION") {
-			//vertices.reserve(Count);
+			vertices.reserve(count);
 			for (size_t i = 0; i < count; ++i) {
 				Vertex vertex;
-				file.read(reinterpret_cast<char*>(&vertex), elementSize);
+				file.read(reinterpret_cast<char*>(&vertex.POSITION), elementSize);
 				vertices.push_back(vertex);
 				file.seekg(stride - elementSize, std::ios::cur); // jump remaining data
 			}
 		}
 		else if(type == "NORMAL") {
-			//normals.reserve(Count);
 			for (size_t i = 0; i < count; ++i) {
-				Normal normal;
-				file.read(reinterpret_cast<char*>(&normal), elementSize);
-				normals.push_back(normal);
+				file.read(reinterpret_cast<char*>(&vertices[i].NORMAL), elementSize);
 				file.seekg(stride - elementSize, std::ios::cur); // jump remaining data
 			}
 		}
 		else if (type == "COLOR") {
-			//colors.reserve(Count);
 			for (size_t i = 0; i < count; ++i) {
-				Color color;
-				file.read(reinterpret_cast<char*>(&color), elementSize);
-				colors.push_back(color);
+				file.read(reinterpret_cast<char*>(&vertices[i].COLOR), elementSize);
 				file.seekg(stride - elementSize, std::ios::cur); // jump remaining data
 			}
 		}
@@ -64,6 +61,7 @@ public:
 
 private:
 	std::string fileName;
+	uint32_t count;
 
 	size_t getElementSize(const std::string& format) {
 		if (format == "R32G32B32_SFLOAT") {
