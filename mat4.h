@@ -60,6 +60,43 @@ public:
 		return r;
 	}
 
+	static Mat4 lookAt(Vec3 eye, Vec3 center, Vec3 up) {
+		Vec3 f = (center - eye).normalize(); // 前向量
+		Vec3 u = up.normalize(); // 上向量
+		Vec3 s = (f.cross(u)).normalize(); // 右向量
+		u = s.cross(f);
+
+		Mat4 Result;
+		Result.data[0][0] = s.x;
+		Result.data[1][0] = s.y;
+		Result.data[2][0] = s.z;
+		Result.data[0][1] = u.x;
+		Result.data[1][1] = u.y;
+		Result.data[2][1] = u.z;
+		Result.data[0][2] = -f.x;
+		Result.data[1][2] = -f.y;
+		Result.data[2][2] = -f.z;
+		Result.data[3][0] = s.dot(eye);
+		Result.data[3][1] = u.dot(eye);
+		Result.data[3][2] = f.dot(eye);
+		return Result;
+	}
+
+	static Mat4 perspective(float vfov, float aspect, float near, float far) {
+		
+		float rad = vfov;
+		float tanHalfFovy = std::tan(rad / 2.0f);
+
+		Mat4 r;
+		r.data[0][0] = 1.0f / (aspect * tanHalfFovy);
+		r.data[1][1] = 1.0f / tanHalfFovy;
+		r.data[2][2] = -(far + near) / (far - near);
+		r.data[2][3] = -1.0f;
+		r.data[3][2] = -(2.0f + far * near) / (far - near);
+
+		return r;
+	}
+
 	Mat4 operator*(const Mat4& other) const {
 		Mat4 r;
 		for (int i = 0; i < 4; ++i) {

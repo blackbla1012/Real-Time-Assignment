@@ -99,10 +99,8 @@ public:
     std::vector<std::shared_ptr<Node>> children;
     std::shared_ptr<Node> parent; // 使用 std::shared_ptr<Node> 代替 Node*
 
-    // 自定义的哈希函数结构体
     struct NodeHash {
         std::size_t operator()(const std::shared_ptr<Node>& node) const {
-            // 在这里编写计算哈希值的逻辑，例如可以使用节点的 s72Index 作为哈希值
             return std::hash<uint32_t>()(node->s72Index);
         }
     };
@@ -133,32 +131,36 @@ public:
 
 class Camera {
 public:
-    Camera() : position(0.0f, 0.0f, 3.0f), front(0.0f, 0.0f, -1.0f), up(0.0f, 1.0f, 0.0f),
-        yaw(-90.0f), pitch(0.0f), speed(2.5f), sensitivity(0.1f),
+    Camera() : position(0.0f, 0.0f, 0.0f), front(0.0f, 0.0f, -1.0f), up(0.0f, 1.0f, 0.0f),
+        yaw(0.0f), pitch(0.0f), speed(2.5f), sensitivity(0.1f),
         zoom(1.0f), scrollSensitivity(0.5f), minZoom(0.2f), maxZoom(10.0f) {
         updateCameraVectors();
-    }
+    }//yaw - angle that define the rotation(around axes Y) pitch - define rotation up/down(around axes X)
 
     std::uint32_t s72Index;
     std::string name;
-
     float aspect;
     float vfov;
-    float near;
-    std::optional<float> far;
+    float nearC;
+    float farC = 100.0f;
+    
     Mat4 localToWorld;
+
+    Vec3 position;
+    float yaw;
+    float pitch;
 
     // Process keyboard input to move the camera
     void processKeyboard(float deltaTime) {
         float velocity = speed * deltaTime;
         if (keys[GLFW_KEY_W])
-            position += front * velocity;
+            position = position + front * velocity;
         if (keys[GLFW_KEY_S])
-            position -= front * velocity;
+            position = position - front * velocity;
         if (keys[GLFW_KEY_A])
-            position -= right * velocity;
+            position = position - right * velocity;
         if (keys[GLFW_KEY_D])
-            position += right * velocity;
+            position = position + right * velocity;
     }
 
     // Process mouse input to look around
@@ -188,8 +190,8 @@ public:
     }
 
     // Get the view matrix
-    glm::mat4 getViewMatrix() {
-        return glm::lookAt(position, position + front, up);
+    Mat4 getViewMatrix() {
+        return Mat4::lookAt(position, position + front, up);
     }
 
     float getZoom() {
@@ -202,14 +204,9 @@ public:
 
 private:
     // Camera attributes
-    glm::vec3 position;
-    glm::vec3 front;
-    glm::vec3 up;
-    glm::vec3 right;
-
-    // Euler angles
-    float yaw;
-    float pitch;
+    Vec3 front;
+    Vec3 up;
+    Vec3 right;
 
     // Camera parameters
     float speed;
@@ -226,11 +223,11 @@ private:
 
     // Update the camera's vectors based on Euler angles
     void updateCameraVectors() {
-        glm::vec3 newFront;
+        Vec3 newFront;
         newFront.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
         newFront.y = sin(glm::radians(pitch));
         newFront.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-        front = glm::normalize(newFront);
-        right = glm::normalize(glm::cross(front, up));
+        front = newFront.normalize();
+        right = front.cross(up).normalize();
     }
 };

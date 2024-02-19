@@ -77,12 +77,10 @@ private:
 						std::string value = "";
 
 						if (std::getline(lineStream, field, ':')) {
-							//È¥³ı×Ö¶ÎÃûÁ½¶ËµÄ¿Õ°××Ö·û
 							field = field.substr(field.find_first_not_of(" \t\r\n"), field.find_last_not_of(" \t\r\n") + 1);
 
 							if (field == "\"name\"") {
 								std::getline(lineStream, camera.name, ',');
-								//È¥³ı×Ö¶ÎÃûÁ½¶ËµÄ¿Õ°××Ö·ûºÍË«ÒıºÅ
 								camera.name = camera.name.substr(camera.name.find_first_not_of(" \t\r\n\""), camera.name.find_last_not_of(" \t\r\n\""));
 							}
 
@@ -99,13 +97,13 @@ private:
 							}
 							else if (field == "\"near\"") {
 								std::getline(lineStream, value, ',');
-								std::istringstream(value) >> camera.near;
+								std::istringstream(value) >> camera.nearC;
 							}
 							else if (field == "\"far\"") {
 								std::getline(lineStream, value, ',');
 								float far;
 								std::istringstream(value) >> far;
-								camera.far = far;
+								camera.farC = far;
 							}
 
 						}
@@ -119,8 +117,8 @@ private:
 					std::cout << "camera name: " << camera.name << "\n" << std::endl;
 					std::cout << "camera aspect: " << camera.aspect << "\n" << std::endl;
 					std::cout << "camera vfov: " << camera.vfov << "\n" << std::endl;
-					std::cout << "camera near: " << camera.near << "\n" << std::endl;
-					std::cout << "camera far: " << *camera.far << "\n" << std::endl;
+					std::cout << "camera near: " << camera.nearC << "\n" << std::endl;
+					std::cout << "camera far: " << camera.farC << "\n" << std::endl;
 		
 				}
 
@@ -138,12 +136,10 @@ private:
 						std::string value = "";
 
 						if (std::getline(lineStream, field, ':')) {
-							//È¥³ı×Ö¶ÎÃûÁ½¶ËµÄ¿Õ°××Ö·û
 							field = field.substr(field.find_first_not_of(" \t\r\n"), field.find_last_not_of(" \t\r\n") + 1);
 
 							if (field == "\"name\"") {
 								std::getline(lineStream, node.name, ',');
-								//È¥³ı×Ö¶ÎÃûÁ½¶ËµÄ¿Õ°××Ö·ûºÍË«ÒıºÅ
 								node.name = node.name.substr(node.name.find_first_not_of(" \t\r\n\""), node.name.find_last_not_of(" \t\r\n\""));
 							}
 

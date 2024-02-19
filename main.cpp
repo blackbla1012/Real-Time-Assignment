@@ -98,18 +98,43 @@ struct SwapChainSupportDetails {
 */
 
 struct UniformBufferObject {
-	alignas(16) glm::mat4 model;
-	alignas(16) glm::mat4 view;
-	alignas(16) glm::mat4 proj;
+	alignas(16) Mat4 model;
+	alignas(16) Mat4 view;
+	alignas(16) Mat4 proj;
 };
 
 Camera userCamera;
+std::vector<Camera> sceneCameras;
+Camera debugCamera;
+Camera* currentCamera = &userCamera;
 
-bool mouseButtonPressed = false;
+
+bool mouseLeftButtonPressed = false;
+bool mouseMiddleButtonPressed = false;
 
 // GLFW callback function for keyboard input
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	if (action == GLFW_PRESS || action == GLFW_RELEASE) {
+	if (action == GLFW_PRESS) {
+		userCamera.updateKeys(key, action == GLFW_PRESS);
+		switch (key) {
+			case GLFW_KEY_1:
+				//switch to userCamera
+				currentCamera = &userCamera;
+				std::cout << "key 1 pressed" << std::endl;
+				break;
+			case GLFW_KEY_2:
+				//switch to scene Camera
+				currentCamera = &sceneCamera;
+				std::cout << "key 2 pressed" << std::endl;
+				break;
+			case GLFW_KEY_3:
+				//switch to scene Camera
+				currentCamera = &debugCamera;
+				std::cout << "key 3 pressed" << std::endl;
+				break;
+		}
+	}
+	else if (action == GLFW_RELEASE) {
 		userCamera.updateKeys(key, action == GLFW_PRESS);
 	}
 }
@@ -125,21 +150,21 @@ void mouseCallback(GLFWwindow* window, double xPos, double yPos) {
 	lastX = xPos;
 	lastY = yPos;
 
-	if (mouseButtonPressed) {
+	if (mouseMiddleButtonPressed) {
 		userCamera.processMouseMovement(xOffset, yOffset);
 	}
 }
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-	if (button == GLFW_MOUSE_BUTTON_LEFT) {
+	if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
 		if (action == GLFW_PRESS) {
 			//when the left key is pressed
 			glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-			mouseButtonPressed = true;
+			mouseMiddleButtonPressed = true;
 		}
 		else {
 			glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
-			mouseButtonPressed = false;
+			mouseMiddleButtonPressed = false;
 		}
 	}
 }
@@ -555,15 +580,17 @@ private:
 		//float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 		UniformBufferObject ubo{};
-		ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-		ubo.view = userCamera.getViewMatrix();
-		ubo.view = glm::scale(ubo.view, glm::vec3(1.0f / userCamera.getZoom()));
-		ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 100.0f);
+		ubo.model = Mat4();
+		ubo.view = currentCamera->getViewMatrix();
+		ubo.view = Mat4::scale(Vec3(1.0f / currentCamera->getZoom())) * ubo.view;
+
+		ubo.proj = Mat4();
+		//ubo.proj = Mat4::perspective(currentCamera->vfov, currentCamera->aspect, currentCamera->nearC, currentCamera->farC);
 
 
 		//ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		//ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
-		ubo.proj[1][1] *= -1;//y coordinate of the clip coordinates is inverted
+		ubo.proj.data[1][1] *= -1;//y coordinate of the clip coordinates is inverted
 
 		memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 	}
@@ -1482,7 +1509,6 @@ std::vector<std::shared_ptr<Node>> topologicalSort(std::vector<std::shared_ptr<N
 }
 
 
-// 在 computeTransform 函数中，将 parent 引用修改为 std::shared_ptr<Node>
 Mat4 computeTransform(std::shared_ptr<Node>& node) {
 	std::cout << "computeTransform: " << node->s72Index << std::endl;
 	Mat4 result = Mat4::translate(node->translation) * Mat4::rotate(node->rotation) * Mat4::scale(node->scale);
@@ -1499,7 +1525,7 @@ Mat4 computeTransform(std::shared_ptr<Node>& node) {
 int main() {
 	std::vector<Vertex> allVertices;
 
-	JsonParser jsonParser("JSON/sg-Articulation.s72");
+	JsonParser jsonParser("JSON/sg-Support.s72");
 
 
 	if (jsonParser.parse()) {
@@ -1508,6 +1534,8 @@ int main() {
 	else {
 		std::cout << "Failed to parse the file!" << std::endl;
 	}
+
+	
 	
 
 	std::vector<std::shared_ptr<Node>> Nodes = assignNodes(jsonParser.nodes);
@@ -1564,7 +1592,6 @@ int main() {
 		std::cout << "mesh vetices: " << mesh.second.count << std::endl;
 
 		allVertices.insert(allVertices.end(), meshInfo.vertices.begin(), meshInfo.vertices.end());
-		//暂时清空内存
 		meshInfo.vertices.resize(0);
 	}
 

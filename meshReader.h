@@ -53,7 +53,6 @@ public:
 		}
 
 		file.close();
-		//这里只是把所有数据都放在了vector中
 
 		return true;
 	}
