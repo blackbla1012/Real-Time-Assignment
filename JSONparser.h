@@ -16,7 +16,7 @@ public:
 	uint32_t index = 0;
 	std::map<uint32_t, Camera> cameras;
 	std::map<uint32_t, Mesh> meshes;
-	std::map<uint32_t, Node> nodes;
+	std::map<uint32_t, std::shared_ptr<Node>> nodes;
 	std::vector<Driver> drivers;
 	std::vector<Data> datas;
 	std::vector<Scene> scenes;
@@ -126,7 +126,7 @@ private:
 				if (type == "\"type\":\"NODE\",") {
 					std::cout << "node detected!\n" << std::endl;
 
-					Node node;
+					auto node = std::make_shared<Node>();
 					std::string line;
 
 					while (std::getline(ss, line) && line != "},") {
@@ -139,8 +139,8 @@ private:
 							field = field.substr(field.find_first_not_of(" \t\r\n"), field.find_last_not_of(" \t\r\n") + 1);
 
 							if (field == "\"name\"") {
-								std::getline(lineStream, node.name, ',');
-								node.name = node.name.substr(node.name.find_first_not_of(" \t\r\n\""), node.name.find_last_not_of(" \t\r\n\""));
+								std::getline(lineStream, node->name, ',');
+								node->name = node->name.substr(node->name.find_first_not_of(" \t\r\n\""), node->name.find_last_not_of(" \t\r\n\""));
 							}
 
 							else if (field == "\"translation\"") {
@@ -149,19 +149,19 @@ private:
 
 								//read translation.x
 								value = value.substr(value.find_first_not_of(" \t\r\n\"["), value.find_last_not_of(" \t\r\n\"]") + 1);
-								node.translation.x = std::stof(value);
+								node->translation.x = std::stof(value);
 
 								//read translation.y
 								std::getline(lineStream, value, ',');
 								value = value.substr(value.find_first_not_of(" \t\r\n\"["), value.find_last_not_of(" \t\r\n\"]") + 1);
-								node.translation.y = std::stof(value);
+								node->translation.y = std::stof(value);
 
 								//read translation.z
 								std::getline(lineStream, value, ',');
 								value = value.substr(value.find_first_not_of(" \t\r\n\"["), value.find_last_not_of(" \t\r\n\"]") + 1);
-								node.translation.z = std::stof(value);
+								node->translation.z = std::stof(value);
 
-								std::cout << "node translation: " << node.translation.x << ", " << node.translation.y << ", " << node.translation.z << "\n" << std::endl;
+								std::cout << "node translation: " << node->translation.x << ", " << node->translation.y << ", " << node->translation.z << "\n" << std::endl;
 							}
 
 							else if (field == "\"rotation\"") {
@@ -170,24 +170,24 @@ private:
 
 								//read rotation.x
 								value = value.substr(value.find_first_not_of(" \t\r\n\"["), value.find_last_not_of(" \t\r\n\"]") + 1);
-								node.rotation.x = std::stof(value);
+								node->rotation.x = std::stof(value);
 
 								//read rotation.y
 								std::getline(lineStream, value, ',');
 								value = value.substr(value.find_first_not_of(" \t\r\n\"["), value.find_last_not_of(" \t\r\n\"]") + 1);
-								node.rotation.y = std::stof(value);
+								node->rotation.y = std::stof(value);
 
 								//read rotation.z
 								std::getline(lineStream, value, ',');
 								value = value.substr(value.find_first_not_of(" \t\r\n\"["), value.find_last_not_of(" \t\r\n\"]") + 1);
-								node.rotation.z = std::stof(value);
+								node->rotation.z = std::stof(value);
 
 								//read rotation.w
 								std::getline(lineStream, value, ',');
 								value = value.substr(value.find_first_not_of(" \t\r\n\"["), value.find_last_not_of(" \t\r\n\"]") + 1);
-								node.rotation.w = std::stof(value);
+								node->rotation.w = std::stof(value);
 
-								std::cout << "node rotation: " << node.rotation.x << ", " << node.rotation.y << ", " << node.rotation.z << ", " << node.rotation.w << "\n" << std::endl;
+								std::cout << "node rotation: " << node->rotation.x << ", " << node->rotation.y << ", " << node->rotation.z << ", " << node->rotation.w << "\n" << std::endl;
 							}
 							else if (field == "\"scale\"") {
 								std::getline(lineStream, value, ',');
@@ -195,38 +195,38 @@ private:
 
 								//read scale.x
 								value = value.substr(value.find_first_not_of(" \t\r\n\"["), value.find_last_not_of(" \t\r\n\"]") + 1);
-								node.scale.x = std::stof(value);
+								node->scale.x = std::stof(value);
 
 								//read scale.y
 								std::getline(lineStream, value, ',');
 								value = value.substr(value.find_first_not_of(" \t\r\n\"["), value.find_last_not_of(" \t\r\n\"]") + 1);
-								node.scale.y = std::stof(value);
+								node->scale.y = std::stof(value);
 
 								//read scale.z
 								std::getline(lineStream, value, ',');
 								value = value.substr(value.find_first_not_of(" \t\r\n\"["), value.find_last_not_of(" \t\r\n\"]") + 1);
-								node.scale.z = std::stof(value);
+								node->scale.z = std::stof(value);
 
-								std::cout << "node scale: " << node.scale.x << ", " << node.scale.y << ", " << node.scale.z << "\n" << std::endl;
+								std::cout << "node scale: " << node->scale.x << ", " << node->scale.y << ", " << node->scale.z << "\n" << std::endl;
 							}
 							else if (field == "\"mesh\"") {
 								std::getline(lineStream, value, ',');
 								int meshIndex = std::stoi(value);
-								node.mesh = static_cast<uint32_t>(meshIndex);
-								std::cout << "node mesh: " << *node.mesh << "\n" << std::endl;
+								node->mesh = static_cast<uint32_t>(meshIndex);
+								std::cout << "node mesh: " << *node->mesh << "\n" << std::endl;
 							}
 							else if (field == "\"camera\"") {
 								std::getline(lineStream, value, ',');
 								int cameraIndex = std::stoi(value);
-								node.camera = static_cast<uint32_t>(cameraIndex);
-								std::cout << "node camera: " << *node.camera << "\n" << std::endl;
+								node->camera = static_cast<uint32_t>(cameraIndex);
+								std::cout << "node camera: " << *node->camera << "\n" << std::endl;
 
 							}
 							else if (field == "\"children\"") {
 								while (std::getline(lineStream, value, ',')) {
 									value = value.substr(value.find_first_not_of(" \t\r\n\"["), value.find_last_not_of(" \t\r\n\"]") + 1);
 									int childStr = std::stoi(value);
-									node.childrenIndex.push_back(static_cast<uint32_t>(childStr));
+									node->childrenIndex.push_back(static_cast<uint32_t>(childStr));
 									std::cout << "node children: " << childStr << "\n" << std::endl;
 								}
 							}
@@ -234,11 +234,11 @@ private:
 					}
 
 					index++;
-					node.s72Index = index;
+					node->s72Index = index;
 
 					nodes.insert({ index, node });
-					std::cout << "object index: " << node.s72Index << "\n" << std::endl;
-					std::cout << "node name: " << node.name << "\n" << std::endl;
+					std::cout << "object index: " << node->s72Index << "\n" << std::endl;
+					std::cout << "node name: " << node->name << "\n" << std::endl;
 					//std::cout << "node translation: " << node.translation.x << "\n" << std::endl;
 				}
 

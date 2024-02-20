@@ -83,7 +83,7 @@ public:
 	data NORMAL;
 	data COLOR;
 
-    Mat4 localToWorld;
+    std::vector<Vertex> vertices;
 };
 
 class Node : public std::enable_shared_from_this<Node> {
@@ -98,12 +98,7 @@ public:
     std::vector<uint32_t> childrenIndex;
     std::vector<std::shared_ptr<Node>> children;
     std::shared_ptr<Node> parent; // Ê¹ÓÃ std::shared_ptr<Node> ´úÌæ Node*
-
-    struct NodeHash {
-        std::size_t operator()(const std::shared_ptr<Node>& node) const {
-            return std::hash<uint32_t>()(node->s72Index);
-        }
-    };
+    Mat4 localToWorld;
 
     bool operator==(const Node& other) const {
         return s72Index == other.s72Index;
@@ -144,23 +139,26 @@ public:
     float nearC;
     float farC = 100.0f;
     
-    Mat4 localToWorld;
-
     Vec3 position;
     float yaw;
     float pitch;
+
+    // Camera attributes
+    Vec3 front;
+    Vec3 up;
+    Vec3 right;
 
     // Process keyboard input to move the camera
     void processKeyboard(float deltaTime) {
         float velocity = speed * deltaTime;
         if (keys[GLFW_KEY_W])
-            position = position + front * velocity;
+            position = position - up * velocity;
         if (keys[GLFW_KEY_S])
-            position = position - front * velocity;
+            position = position + up * velocity;
         if (keys[GLFW_KEY_A])
-            position = position - right * velocity;
-        if (keys[GLFW_KEY_D])
             position = position + right * velocity;
+        if (keys[GLFW_KEY_D])
+            position = position - right * velocity;
     }
 
     // Process mouse input to look around
@@ -203,11 +201,6 @@ public:
     }
 
 private:
-    // Camera attributes
-    Vec3 front;
-    Vec3 up;
-    Vec3 right;
-
     // Camera parameters
     float speed;
     float sensitivity;
@@ -230,4 +223,16 @@ private:
         front = newFront.normalize();
         right = front.cross(up).normalize();
     }
+};
+
+class BBox {
+public:
+    Vec3 min = Vec3(std::numeric_limits<float>::max());
+    Vec3 max = Vec3(std::numeric_limits<float>::lowest());
+
+    void update(const Vec3& point) {
+        min = Vec3::min(min, point);
+        max = Vec3::max(max, point);
+    }
+
 };

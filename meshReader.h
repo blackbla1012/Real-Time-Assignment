@@ -11,9 +11,7 @@
 
 class MeshReader {
 public:
-	MeshReader(const std::string& fileName, const uint32_t count) : fileName(fileName), count(count) {}
-
-	std::vector<Vertex> vertices;
+	MeshReader(Mesh& mesh, const std::string& fileName, const uint32_t count) : mesh(mesh), fileName(fileName), count(count) {}
 	
 	bool readMesh(size_t offset, size_t stride, std::string format, std::string type) {
 		std::ifstream file("JSON/" + fileName, std::ios::binary);
@@ -31,23 +29,23 @@ public:
 
 		file.seekg(offset, std::ios::beg);
 		if (type == "POSITION") {
-			vertices.reserve(count);
+			mesh.vertices.reserve(count);
 			for (size_t i = 0; i < count; ++i) {
 				Vertex vertex;
 				file.read(reinterpret_cast<char*>(&vertex.POSITION), elementSize);
-				vertices.push_back(vertex);
+				mesh.vertices.push_back(vertex);
 				file.seekg(stride - elementSize, std::ios::cur); // jump remaining data
 			}
 		}
 		else if(type == "NORMAL") {
 			for (size_t i = 0; i < count; ++i) {
-				file.read(reinterpret_cast<char*>(&vertices[i].NORMAL), elementSize);
+				file.read(reinterpret_cast<char*>(&mesh.vertices[i].NORMAL), elementSize);
 				file.seekg(stride - elementSize, std::ios::cur); // jump remaining data
 			}
 		}
 		else if (type == "COLOR") {
 			for (size_t i = 0; i < count; ++i) {
-				file.read(reinterpret_cast<char*>(&vertices[i].COLOR), elementSize);
+				file.read(reinterpret_cast<char*>(&mesh.vertices[i].COLOR), elementSize);
 				file.seekg(stride - elementSize, std::ios::cur); // jump remaining data
 			}
 		}
@@ -61,6 +59,7 @@ public:
 private:
 	std::string fileName;
 	uint32_t count;
+	Mesh& mesh;
 
 	size_t getElementSize(const std::string& format) {
 		if (format == "R32G32B32_SFLOAT") {

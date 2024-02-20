@@ -76,8 +76,9 @@ public:
 		Result.data[0][2] = -f.x;
 		Result.data[1][2] = -f.y;
 		Result.data[2][2] = -f.z;
-		Result.data[3][0] = s.dot(eye);
-		Result.data[3][1] = u.dot(eye);
+		Result.data[3][0] = -s.dot(eye);
+		Result.data[3][1] = -u.dot(eye);
+		Result.data[3][1] = -u.dot(eye);
 		Result.data[3][2] = f.dot(eye);
 		return Result;
 	}
@@ -108,6 +109,20 @@ public:
 			}
 		}
 		return r;
+	}
+
+	Mat4& operator*=(const Mat4& other) {
+		Mat4 temp;
+		for (int i = 0; i < 4; ++i) {
+			for (int j = 0; j < 4; ++j) {
+				temp.data[i][j] = 0.0f;
+				for (int k = 0; k < 4; ++k) {
+					temp.data[i][j] += data[i][k] * other.data[k][j];
+				}
+			}
+		}
+		*this = temp;
+		return *this;
 	}
 
 	Vec4 operator*(const Vec4& vec) const {

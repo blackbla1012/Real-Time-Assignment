@@ -107,7 +107,9 @@ Camera userCamera;
 std::vector<Camera> sceneCameras;
 Camera debugCamera;
 Camera* currentCamera = &userCamera;
+uint32_t cameraType = 0;
 
+std::vector<Mesh> renderMeshes;
 
 bool mouseLeftButtonPressed = false;
 bool mouseMiddleButtonPressed = false;
@@ -115,27 +117,54 @@ bool mouseMiddleButtonPressed = false;
 // GLFW callback function for keyboard input
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (action == GLFW_PRESS) {
-		userCamera.updateKeys(key, action == GLFW_PRESS);
+		if (cameraType != 1) {
+			currentCamera->updateKeys(key, action == GLFW_PRESS);//
+		}
 		switch (key) {
 			case GLFW_KEY_1:
 				//switch to userCamera
 				currentCamera = &userCamera;
-				std::cout << "key 1 pressed" << std::endl;
+				cameraType = 0;
+				std::cout << "Current Camera: User Camera" << std::endl;
 				break;
 			case GLFW_KEY_2:
+			{
 				//switch to scene Camera
-				currentCamera = &sceneCamera;
-				std::cout << "key 2 pressed" << std::endl;
-				break;
+				if (sceneCameras.empty()) {
+					std::cout << "There's no scene cameras in the scene!" << std::endl;
+					break;
+				}
+
+				int cameraIndex = 0;
+				for (; cameraIndex < sceneCameras.size(); cameraIndex++) {
+					if (currentCamera == &sceneCameras[cameraIndex]) {
+						currentCamera = &sceneCameras[(cameraIndex + 1) % sceneCameras.size()];
+						std::cout << "Current Camera: " << currentCamera->name << std::endl;
+						break;
+					}
+				}
+
+				if (cameraIndex == sceneCameras.size()) {
+					currentCamera = &sceneCameras[0];
+					std::cout << "Current Camera: " << currentCamera->name << std::endl;
+				}
+
+				cameraType = 1;
+			}
+			break;
+
 			case GLFW_KEY_3:
 				//switch to scene Camera
 				currentCamera = &debugCamera;
-				std::cout << "key 3 pressed" << std::endl;
+				std::cout << "Current Camera: Debug Camera" << std::endl;
+				cameraType = 2;
 				break;
 		}
 	}
 	else if (action == GLFW_RELEASE) {
-		userCamera.updateKeys(key, action == GLFW_PRESS);
+		if (cameraType != 1) {
+			currentCamera->updateKeys(key, action == GLFW_PRESS);//
+		}
 	}
 }
 
@@ -151,7 +180,9 @@ void mouseCallback(GLFWwindow* window, double xPos, double yPos) {
 	lastY = yPos;
 
 	if (mouseMiddleButtonPressed) {
-		userCamera.processMouseMovement(xOffset, yOffset);
+		if (cameraType != 1) {
+			currentCamera->processMouseMovement(xOffset, yOffset);
+		}
 	}
 }
 
@@ -170,7 +201,9 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 }
 
 void scrollCallback(GLFWwindow* window, double xOffset, double yOffset) {
-	userCamera.processMouseScroll(yOffset);
+	if (cameraType != 1) {
+		currentCamera->processMouseScroll(yOffset);
+	}
 }
 
 class HelloTriangleApplication {
@@ -343,7 +376,9 @@ private:
 		lastFrameTime = currentFrameTime;
 
 		// Process input
-		userCamera.processKeyboard(deltaTime);
+		if (cameraType != 1) {
+			currentCamera->processKeyboard(deltaTime);//
+		}
 	}
 
 	void cameraCallBackSetup() {
@@ -585,9 +620,10 @@ private:
 		ubo.view = Mat4::scale(Vec3(1.0f / currentCamera->getZoom())) * ubo.view;
 
 		ubo.proj = Mat4();
-		//ubo.proj = Mat4::perspective(currentCamera->vfov, currentCamera->aspect, currentCamera->nearC, currentCamera->farC);
 
-
+		if (cameraType == 1) {
+			ubo.proj = Mat4::perspective(currentCamera->vfov, currentCamera->aspect, currentCamera->nearC, currentCamera->farC);
+		}
 		//ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		//ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
 		ubo.proj.data[1][1] *= -1;//y coordinate of the clip coordinates is inverted
@@ -1440,126 +1476,96 @@ private:
 	}
 };
 
-void assignParents(std::shared_ptr<Node>& node) {
-	for (auto& child : node->children) {
-		child->parent = node->shared_from_this(); // 使用 shared_from_this 获取指向父节点的 shared_ptr
-		std::cout << "child's index: " << child->s72Index << std::endl;
-		std::cout << "child's parent index: " << child->parent->s72Index << std::endl;
-		assignParents(child);
-	}
-}
-
-std::vector<std::shared_ptr<Node>> assignNodes(std::map<uint32_t, Node> nodesMap) {
-	std::vector<std::shared_ptr<Node>> nodes;
-	for (auto& pair : nodesMap) {
-		auto& node = pair.second;
-		auto sharedNode = std::make_shared<Node>(node);
-		if (!node.childrenIndex.empty()) {
-			for (uint32_t nodeIndex : node.childrenIndex) {
-				sharedNode->children.push_back(std::make_shared<Node>(nodesMap[nodeIndex]));
+void buildSceneGraph(std::map<uint32_t, std::shared_ptr<Node>>& nodes) {
+	for (auto& [id, node] : nodes) {
+		for (auto childId : node->childrenIndex) {
+			auto childNodeIter = nodes.find(childId);
+			if (childNodeIter != nodes.end()) {
+				auto childNode = childNodeIter->second;
+				node->children.push_back(childNode);
+				childNode->parent = node;
 			}
 		}
-		nodes.push_back(sharedNode);
 	}
-
-	for (auto& node : nodes) {
-		assignParents(node);
-	}
-
-	return nodes;
-}
-/*
-* 
-* // 在全局命名空间中声明特化的 std::hash 模板
-namespace std {
-	template <>
-	struct hash<Node> {
-		std::size_t operator()(const Node& node) const {
-			return Node::NodeHash()(node);
-		}
-	};
-};
-*/
-
-
-void topologicalSortUtil(std::shared_ptr<Node>& node,
-	std::unordered_set<std::shared_ptr<Node>, Node::NodeHash>& visited,
-	std::vector<std::shared_ptr<Node>>& result) {
-	if (visited.count(node))
-		return;
-
-	visited.insert(node);
-
-	for (auto& child : node->children) {
-		topologicalSortUtil(child, visited, result);
-	}
-
-	result.push_back(node);
 }
 
-std::vector<std::shared_ptr<Node>> topologicalSort(std::vector<std::shared_ptr<Node>>& nodes) {
-	std::vector<std::shared_ptr<Node>> result;
-	std::unordered_set<std::shared_ptr<Node>, Node::NodeHash> visited;
+Mat4 computeTransform(const std::shared_ptr<Node>& node) {
+	Mat4 result = Mat4::translate(node->translation) *
+		Mat4::rotate(node->rotation) *
+		Mat4::scale(node->scale);
 
-	for (auto& node : nodes) {
-		topologicalSortUtil(node, visited, result);
-	}
-
-	return result;
-}
-
-
-Mat4 computeTransform(std::shared_ptr<Node>& node) {
-	std::cout << "computeTransform: " << node->s72Index << std::endl;
-	Mat4 result = Mat4::translate(node->translation) * Mat4::rotate(node->rotation) * Mat4::scale(node->scale);
-
-	if (node->parent != nullptr) {
-		std::cout << "has parent value" << std::endl;
+	if (node->parent) {
+		std::cout << "parent detected" << std::endl;
 		result = computeTransform(node->parent) * result;
 	}
 
 	return result;
 }
 
-
-int main() {
-	std::vector<Vertex> allVertices;
-
-	JsonParser jsonParser("JSON/sg-Support.s72");
-
-
-	if (jsonParser.parse()) {
-		std::cout << "Succeeded to parse the file!" << std::endl;
+void updateTransforms(std::map<uint32_t, std::shared_ptr<Node>>& nodes) {
+	for (auto& [id, node] : nodes) {
+		node->localToWorld = computeTransform(node);
 	}
-	else {
-		std::cout << "Failed to parse the file!" << std::endl;
-	}
+}
 
-	
-	
+void instanceMeshes(std::map<uint32_t, std::shared_ptr<Node>>& nodes, std::map<uint32_t, Mesh>& meshes) {
+	for (auto& [nodeId, nodePtr] : nodes) {
+		if (nodePtr->mesh.has_value()) {
+			uint32_t meshId = nodePtr->mesh.value();
+			auto meshIter = meshes.find(meshId);
 
-	std::vector<std::shared_ptr<Node>> Nodes = assignNodes(jsonParser.nodes);
-	std::vector<std::shared_ptr<Node>> sortedNodes = topologicalSort(Nodes);
+			if (meshIter != meshes.end()) {
+				//instance a new mesh
+				Mesh renderMesh = meshIter->second;//copy original mesh
 
+				//apply node transform to mesh vertices
+				for (Vertex& vertex : renderMesh.vertices) {
+					Vec4 transformedPosition = nodePtr->localToWorld * Vec4(vertex.POSITION, 1.0f);
+					vertex.POSITION = transformedPosition.project();
 
-	//assign transformations
-	for (auto& node : sortedNodes) {
-		Mat4 localToWorld = computeTransform(node);
-		std::cout << "node index: " << node->s72Index << std::endl;
+					Vec4 transformedNormal = Mat4::transpose(Mat4::inverse(nodePtr->localToWorld)) * Vec4(vertex.NORMAL, 0.0f);
+					vertex.NORMAL = Vec3(transformedNormal.x, transformedNormal.y, transformedNormal.z).normalize();
+				}
 
-		if (node->camera.has_value()) {
-			//jsonParser.cameras.find(node->camera.value())->second.localToWorld = localToWorld;
+				renderMeshes.push_back(renderMesh);
+			}
 		}
-		else if (node->mesh.has_value()) {
-			//std::cout << "mesh transform assign\n" << std::endl;
-			jsonParser.meshes.find(node->mesh.value())->second.localToWorld = localToWorld;
-			std::cout << "mesh transform assign\n" << std::endl;
-		}
-		else continue;
 	}
+}
 
-	for (auto& mesh : jsonParser.meshes) {
-		MeshReader meshInfo(mesh.second.POSITION.src, mesh.second.count);
+void instanceCameras(std::map<uint32_t, std::shared_ptr<Node>>& nodes, std::map<uint32_t, Camera>& cameras) {
+	for (auto& [nodeId, nodePtr] : nodes) {
+		if (nodePtr->camera.has_value()) {
+			uint32_t cameraId = nodePtr->camera.value();
+			auto cameraIter = cameras.find(cameraId);
+
+			if (cameraIter != cameras.end()) {
+				//instance a new camera
+				Camera sceneCamera = cameraIter->second;//copy original mesh
+
+				//apply node transform to camera
+				Vec4 transformedFront = nodePtr->localToWorld * Vec4(sceneCamera.front, 0.0f);
+				sceneCamera.front = Vec3(transformedFront.x, transformedFront.y, transformedFront.z).normalize();
+
+				Vec4 transformedUp = nodePtr->localToWorld * Vec4(sceneCamera.up, 0.0f);
+				sceneCamera.up = Vec3(transformedUp.x, transformedUp.y, transformedUp.z).normalize();
+
+				Vec4 transformedRight = nodePtr->localToWorld * Vec4(sceneCamera.right, 0.0f);
+				sceneCamera.right = Vec3(transformedRight.x, transformedRight.y, transformedRight.z).normalize();
+
+				Vec3 translation(nodePtr->localToWorld.data[0][3], nodePtr->localToWorld.data[1][3], nodePtr->localToWorld.data[2][3]);
+				sceneCamera.position = sceneCamera.position + translation;
+
+				sceneCameras.push_back(sceneCamera);
+			}
+		}
+	}
+}
+
+
+void readMeshVertices(std::map<uint32_t, Mesh>& meshes) {
+	for (auto& mesh : meshes) {
+		MeshReader meshInfo(mesh.second, mesh.second.POSITION.src, mesh.second.count);
 		if (meshInfo.readMesh(mesh.second.POSITION.offset, mesh.second.POSITION.stride, mesh.second.POSITION.format, "POSITION")) {
 			std::cout << "Succeeded to read the mesh POSITION information!" << std::endl;
 		}
@@ -1583,16 +1589,29 @@ int main() {
 
 		std::cout << "Read Mesh Index: " << mesh.second.s72Index << std::endl;
 
-		for (Vertex& vertex : meshInfo.vertices) {
-			vertex.POSITION = mesh.second.localToWorld * vertex.POSITION;
-			vertex.NORMAL = Mat4::transpose(Mat4::inverse(mesh.second.localToWorld)) * vertex.NORMAL;
-		}
+	}//assign vertices to mesh
+}
 
-		std::cout << "file name: " << mesh.second.POSITION.src << std::endl;
-		std::cout << "mesh vetices: " << mesh.second.count << std::endl;
+int main() {
+	JsonParser jsonParser("JSON/sg-Articulation.s72");
 
-		allVertices.insert(allVertices.end(), meshInfo.vertices.begin(), meshInfo.vertices.end());
-		meshInfo.vertices.resize(0);
+	if (jsonParser.parse()) {
+		std::cout << "Succeeded to parse the file!" << std::endl;
+	}
+	else {
+		std::cout << "Failed to parse the file!" << std::endl;
+	}
+	
+	readMeshVertices(jsonParser.meshes);
+	buildSceneGraph(jsonParser.nodes);//build node child/parent relationship
+	updateTransforms(jsonParser.nodes);//update localToWorld Mat4 in nodes
+	instanceMeshes(jsonParser.nodes, jsonParser.meshes);//instance meshes to renderMesh vector
+	instanceCameras(jsonParser.nodes, jsonParser.cameras);
+
+	std::vector<Vertex> allVertices;
+
+	for (auto& mesh : renderMeshes) {
+		allVertices.insert(allVertices.end(), mesh.vertices.begin(), mesh.vertices.end());
 	}
 
 	std::cout << "vertex count: " << allVertices.size() << std::endl;
